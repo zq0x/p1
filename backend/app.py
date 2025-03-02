@@ -204,7 +204,83 @@ async def docker_rest(request: Request):
         
 
 
+        if req_data["req_method"] == "service":
+            try:
+                service = client.services.get('vllm-service')
+                service.remove()
+            except docker.errors.NotFound:
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+                return JSONResponse({"result_status": 500, "result_data": e})
+            try:
+                # Create the new service with updated configurations
+                res_service = client.services.create(
+                    image='vllm/vllm-openai:latest',
+                    name='vllm-service',
+                    env=['NCCL_DEBUG=INFO'],
+                    ports=[('1370', '1370')],
+                    mounts=[
+                        docker.types.Mount(target='/data', source='/volume_hf', type='bind'),
+                        docker.types.Mount(target='/mnt/primeline-ai', source='/mnt/primeline-ai', type='bind'),
+                        docker.types.Mount(target='/models', source='/models', type='bind')
+                    ],
+                    command=[
+                        '--model', 'models/facebook/opt-125m',
+                        '--max-model-len', '4096',
+                        '--cpu-offload-gb', '0',
+                        '--enforce-eager',
+                        '--enable-prefix-caching',
+                        '--tensor-parallel-size', '2',
+                        '--kv-cache-dtype', 'fp8',
+                        '--port', '1370',
+                        '--swap-space', '2',
+                        '--gpu-memory-utilization', '0.95',
+                        '--served-model-name', 'opt-125m',
+                        '--enable-chunked-prefill',
+                        '--trust-remote-code'
+                    ],
+                    resources=docker.types.Resources(
+                        reservations=docker.types.Resources(
+                            devices=[{
+                                'Driver': 'nvidia',
+                                'DeviceIDs': ['0', '1'],
+                                'Capabilities': ['gpu']
+                            }]
+                        )
+                    ),
+                    restart_policy=docker.types.RestartPolicy(condition='always')
+                )
+
+                print("Service created successfully.")
+                res_service_id = res_service.id
+                return JSONResponse({"result_status": 200, "result_data": str(res_service_id)})
+            except Exception as e:
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+                return JSONResponse({"result_status": 500, "result_data": e})
+           
+
         if req_data["req_method"] == "update":
+            try:
+                req_container = client.containers.get('container_vllm')
+                res_container = req_container.update(
+                    shm_size=req_data.get("shm_size", "8gb"),
+                    environment={
+                        "NCCL_DEBUG": "INFO",
+                        "MODEL": req_data["req_model"],
+                        "PORT": "1370",
+                        "TENSOR_PARALLEL_SIZE": "1",
+                        "GPU_MEMORY_UTILIZATION": "0.95",
+                        "MAX_MODEL_LEN": "4096"
+                    }
+                )
+                container_id = res_container.id
+                return JSONResponse({"result_status": 200, "result_data": str(container_id)})
+            except Exception as e:
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+
+                return JSONResponse({"result_status": 200, "result_data": stats})
+            
+            
+        if req_data["req_method"] == "update2":
             try:
 
                 print(f'trying to update {req_data["req_model"]}...')
@@ -257,8 +333,11 @@ async def docker_rest(request: Request):
         if req_data["req_method"] == "generate":
             try:
                 if req_data["req_model"] not in llm_instances:
-                    return JSONResponse({"result_status": 400, "result_data": e})
+                    print(f'MODEL NOT IN STANCES EGAAAAAAAL')
+                llm_instances[req_data["req_model"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
                 
+                print("llm_instances")
+                print(llm_instances)
                 sampling_params = SamplingParams(int(temperature=req_data["req_temperature"]), top_p=0.9, max_tokens=100)
                 
                 outputs = llm_instances[req_data["req_model"]].generate([req_data["req_prompt"]], sampling_params)
@@ -301,7 +380,7 @@ async def docker_rest(request: Request):
             req_container = client.containers.get(req_data["req_model"])
             req_container.stop()
             req_container.remove(force=True)
-            return JSONResponse({"result": 200})
+            return JSONResponse({"result_status": 200})
 
         if req_data["req_method"] == "stop":
             req_container = client.containers.get(req_data["req_model"])
@@ -402,7 +481,7 @@ async def docker_rest(request: Request):
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 r.delete(f'running_model:{str(req_data["req_model"])}')
-                return JSONResponse({"result": 404, "result_data": str(e)})
+                return JSONResponse({"result_status": 404, "result_data": str(e)})
 
 
 
@@ -440,19 +519,19 @@ async def docker_rest(request: Request):
                 req_container.start(command=new_command)
                 print(f"Container '{container_name}' restarted with new settings.")
 
-                return JSONResponse({"result": 200, "result_data": str(f"Container '{container_name}' restarted with new settings.")})
+                return JSONResponse({"result_status": 200, "result_data": str(f"Container '{container_name}' restarted with new settings.")})
 
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 r.delete(f'running_model:{str(req_data["req_model"])}')
-                return JSONResponse({"result": 404, "result_data": str(e)})
+                return JSONResponse({"result_status": 404, "result_data": str(e)})
 
 
 
 
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return JSONResponse({"result": 500, "result_data": str(e)})
+        return JSONResponse({"result_status": 500, "result_data": str(e)})
 
 if __name__ == "__main__":
     import uvicorn
