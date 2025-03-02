@@ -202,31 +202,83 @@ async def docker_rest(request: Request):
         print(f'req_data {req_data}')
         print(f'llm_instances {llm_instances}')
         
+
+
+        if req_data["req_method"] == "update":
+            try:
+
+                print(f'trying to update {req_data["req_model"]}...')
+                model_id_path = str(req_data["req_model"]).replace('/', '_')
+                print(f'model_id_path {model_id_path}...')
+                
+                selected_model_id_arr = str(req_data["req_model"]).split('/')
+                print(f'selected_model_id_arr {selected_model_id_arr}...')
+                
+                model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
+                print(f'model_id_path_default {model_id_path_default}...')
+                
+                global llm
+                # Unload the previous model
+                if 'llm' in globals():
+                    print('Unloading the previous model...')
+                    del llm  # Delete the LLM object
+                    torch.cuda.empty_cache()  # Free GPU memory
+
+
+                                
+                # Check available GPU memory
+                free_memory = torch.cuda.mem_get_info()[0] / (1024 ** 3)  # Free memory in GB
+                print(f'Available GPU memory: {free_memory:.2f} GB')
+
+                # Estimate model size
+                model = AutoModelForCausalLM.from_pretrained(req_data["req_model"], torch_dtype="auto")
+                model_size = sum(p.numel() * p.element_size() for p in model.parameters()) / (1024 ** 3)  # Size in GB
+                print(f'Model size: {model_size:.2f} GB')
+
+                if model_size > free_memory:                    
+                    return JSONResponse({"result_status": 404, "result_data": "Model is too large for available GPU memory"})
+
+                        
+                # Load the new model
+                print(f'Loading the new model: {req_data["req_model"]}...')
+                llm = LLM(
+                    model=req_data["req_model"],
+                    tensor_parallel_size=1,  # Match the tensor-parallel-size in your Docker config
+                    gpu_memory_utilization=0.92  # Match the gpu_memory_utilization in your Docker config
+                )
+
+                
+                return JSONResponse({"result_status": 200, "result_data": "Model updated successfully"})
+
+            except Exception as e:
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+                return JSONResponse({"result_status": 404, "result_data": str(e)})
+            
         if req_data["req_method"] == "generate":
             try:
-                if req_data["req_instance_id"] not in llm_instances:
-                    raise HTTPException(status_code=400, detail=f'Instance {req_data["req_instance_id"]} not found')
+                if req_data["req_model"] not in llm_instances:
+                    return JSONResponse({"result_status": 400, "result_data": e})
                 
                 sampling_params = SamplingParams(int(temperature=req_data["req_temperature"]), top_p=0.9, max_tokens=100)
                 
-                outputs = llm_instances[req_data["req_instance_id"]].generate([req_data["req_prompt"]], sampling_params)
-                return {"response": outputs[0].outputs[0].text}
+                outputs = llm_instances[req_data["req_model"]].generate([req_data["req_prompt"]], sampling_params)
+                return JSONResponse({"result_status": 200, "result_data": outputs[0].outputs[0].text})
                 
             except Exception as e:
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result": 404, "result_data": str(e)})
-
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')                
+                return JSONResponse({"result_status": 500, "result_data": e})
 
         if req_data["req_method"] == "load":
             try:
-                llm_instances[req_data["req_instance_id"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
+                llm_instances[req_data["req_model"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
                 
                 print("llm_instances")
                 print(llm_instances)
                 
                 return {"message": f'Model {req_data["req_model"]} loaded successfully for instance {req_data["req_model"]}'}
             except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')  
+                return JSONResponse({"result_status": 500, "result_data": e})
 
         
                 
@@ -234,12 +286,12 @@ async def docker_rest(request: Request):
             req_container = client.containers.get(req_data["req_model"])
             res_logs = req_container.logs()
             res_logs_str = res_logs.decode('utf-8')
-            return JSONResponse({"result": 200, "result_data": res_logs_str})
+            return JSONResponse({"result_status": 200, "result_data": res_logs_str})
 
         if req_data["req_method"] == "network":
             req_container = client.containers.get(req_data["req_container_name"])
             stats = req_container.stats(stream=False)
-            return JSONResponse({"result": 200, "result_data": stats})
+            return JSONResponse({"result_status": 200, "result_data": stats})
 
         if req_data["req_method"] == "list":
             res_container_list = client.containers.list(all=True)
@@ -254,12 +306,12 @@ async def docker_rest(request: Request):
         if req_data["req_method"] == "stop":
             req_container = client.containers.get(req_data["req_model"])
             req_container.stop()
-            return JSONResponse({"result": 200})
+            return JSONResponse({"result_status": 200})
 
         if req_data["req_method"] == "start":
             req_container = client.containers.get(req_data["req_model"])
             req_container.start()
-            return JSONResponse({"result": 200})
+            return JSONResponse({"result_status": 200})
 
         if req_data["req_method"] == "create":
             try:
@@ -272,13 +324,13 @@ async def docker_rest(request: Request):
                     all_used_models = [g["used_models"] for g in db_gpu]
                     print(f'all_used_models {all_used_models}')
                     if req_data["req_model"] in all_used_models:
-                        return JSONResponse({"result": 302, "result_data": "Model already downloaded. Trying to start container ..."})
+                        return JSONResponse({"result_status": 302, "result_data": "Model already downloaded. Trying to start container ..."})
                     
                     # check if ports already used
                     all_used_ports = [g["used_ports"] for g in db_gpu]
                     print(f'all_used_ports {all_used_ports}')
                     if req_data["req_port_vllm"] in all_used_ports or req_data["req_port_model"] in all_used_ports:
-                        return JSONResponse({"result": 409, "result_data": "Error: Port already in use"})
+                        return JSONResponse({"result_status": 409, "result_data": "Error: Port already in use"})
                     
                     # check if memory available
                     current_gpu_info = get_gpu_info()
@@ -296,7 +348,7 @@ async def docker_rest(request: Request):
                             continue
                         else:
                             if i == 9:
-                                return JSONResponse({"result": 500, "result_data": "Error: Memory > 80%"})
+                                return JSONResponse({"result_status": 500, "result_data": "Error: Memory > 80%"})
                             else:
                                 time.sleep(1)
                     
@@ -345,7 +397,7 @@ async def docker_rest(request: Request):
                     detach=True
                 )
                 container_id = res_container.id
-                return JSONResponse({"result": 200, "result_data": str(container_id)})
+                return JSONResponse({"result_status": 200, "result_data": str(container_id)})
 
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
@@ -395,69 +447,6 @@ async def docker_rest(request: Request):
                 r.delete(f'running_model:{str(req_data["req_model"])}')
                 return JSONResponse({"result": 404, "result_data": str(e)})
 
-
-
-        if req_data["req_method"] == "update":
-            try:
-
-                print(f'trying to update {req_data["req_model"]}...')
-                model_id_path = str(req_data["req_model"]).replace('/', '_')
-                print(f'model_id_path {model_id_path}...')
-                
-                selected_model_id_arr = str(req_data["req_model"]).split('/')
-                print(f'selected_model_id_arr {selected_model_id_arr}...')
-                
-                model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
-                print(f'model_id_path_default {model_id_path_default}...')
-                
-                global llm
-                # Unload the previous model
-                if 'llm' in globals():
-                    print('Unloading the previous model...')
-                    del llm  # Delete the LLM object
-                    torch.cuda.empty_cache()  # Free GPU memory
-
-
-                                
-                # Check available GPU memory
-                free_memory = torch.cuda.mem_get_info()[0] / (1024 ** 3)  # Free memory in GB
-                print(f'Available GPU memory: {free_memory:.2f} GB')
-
-                # Estimate model size
-                model = AutoModelForCausalLM.from_pretrained(req_data["req_model"], torch_dtype="auto")
-                model_size = sum(p.numel() * p.element_size() for p in model.parameters()) / (1024 ** 3)  # Size in GB
-                print(f'Model size: {model_size:.2f} GB')
-
-                if model_size > free_memory:                    
-                    return JSONResponse({"result": 404, "result_data": "Model is too large for available GPU memory"})
-
-                        
-                # Load the new model
-                print(f'Loading the new model: {req_data["req_model"]}...')
-                llm = LLM(
-                    model=req_data["req_model"],
-                    tensor_parallel_size=2,  # Match the tensor-parallel-size in your Docker config
-                    gpu_memory_utilization=0.92  # Match the gpu_memory_utilization in your Docker config
-                )
-
-                
-                return JSONResponse({"result": 200, "result_data": "Model updated successfully"})
-
-            except Exception as e:
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result": 404, "result_data": str(e)})
-
-
-
-        if req_data["req_method"] == "generate":
-            try:
-                sampling_params = SamplingParams(temperature=0.7, top_p=0.95, max_tokens=100)
-                outputs = llm.generate([req_data["req_str"]], sampling_params)
-                return JSONResponse({"result": 200, "result_data": outputs[0].outputs[0].text})
-
-            except Exception as e:
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result": 404, "result_data": str(e)})
 
 
 

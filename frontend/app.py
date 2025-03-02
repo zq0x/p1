@@ -312,49 +312,27 @@ def update_visibility_model_info():
 
 
 
-def docker_api(req_type,req_model):
+def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_temperature=None):
     
     try:
-        if req_type == "list":
-            response = requests.post(BACKEND_URL, json={"req_method":req_type})
-            res_json = response.json()
-            if response.status_code == 200:
-                return res_json
-            else:
-                logging.exception(f'Exception occurred', exc_info=True)
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return f'Error: {response.status_code}'
-            
-        if req_type == "logs":
-            response = requests.post(BACKEND_URL, json={"req_method":"logs","req_model":req_model})
-            res_json = response.json()
-            return f'{res_json["result_data"]}'
-                    
-        if req_type == "change":
-            response = requests.post(BACKEND_URL, json={"req_method":"change","req_model":req_model})
-            res_json = response.json()
-            return f'{res_json["result_data"]}'
-                    
-        if req_type == "update":
-            response = requests.post(BACKEND_URL, json={"req_method":"update","req_model":req_model})
-            res_json = response.json()
-            return f'{res_json["result_data"]}'
+        response = requests.post(BACKEND_URL, json={
+            "req_type":req_type,
+            "req_model":req_model,
+            "req_task":req_task,
+            "req_prompt":req_prompt,
+            "req_type":req_type,
+            "req_temperature":req_temperature
+        })
         
-        if req_type == "network":
-            response = requests.post(BACKEND_URL, json={"req_method":"network","req_container_name":req_model})
-            res_json = response.json()
-            if res_json["result"] == 200:
-                return f'{res_json["result_data"]["networks"]["eth0"]["rx_bytes"]}'
-            else:
-                logging.exception(f'Exception occurred', exc_info=True)
-                return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error network {res_json}'
-        
-        if req_type == "start" or req_type == "stop" or req_type == "delete":
-            response = requests.post(BACKEND_URL, json={"req_method":{req_type},"req_model":req_model})
-            res_json = response.json()
-            return res_json
-        # ...
-           
+        if response.status_code == 200:
+            response_json = response.json()
+            if response_json["result_status"] != 200:
+                logging.exception(f'[docker_api] Response Error: {response_json["result_data"]}')
+            return response_json["result_data"]                
+        else:
+            logging.exception(f'[docker_api] Request Error: {response}')
+            return f'Request Error: {response}'
+    
     except Exception as e:
         logging.exception(f'Exception occured: {e}', exc_info=True)
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
@@ -530,6 +508,9 @@ with gr.Blocks() as app:
     btn_dl = gr.Button("Download", visible=False)
     btn_dl2 = gr.Button("Change", visible=True)
     btn_dl3 = gr.Button("Update", visible=True)
+    prompt_in = gr.Textbox(placeholder="Write a prompt", show_label=False, visible=True)
+    prompt_out = gr.Textbox(placeholder="Response", show_label=False, visible=True)
+    prompt_btn = gr.Button("Update", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_container_name]).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(update_visibility_model_info, None, [selected_model_pipeline_tag, selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_size,selected_model_gated]).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl]) 
     
