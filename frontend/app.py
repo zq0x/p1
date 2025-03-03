@@ -466,7 +466,7 @@ with gr.Blocks() as app:
     btn = gr.Button("Search")
     out = gr.Textbox(visible=False)
 
-    model_dropdown = gr.Dropdown(choices=[''], interactive=True, show_label=False, visible=False)
+    model_dropdown = gr.Dropdown(choices=['facebook/opt-125m'], interactive=True, show_label=False, visible=False)
 
     with gr.Row():
         selected_model_id = gr.Textbox(label="id",visible=False)
