@@ -80,7 +80,7 @@ services:
     command: [
       "--model", "microsoft/Phi-3-mini-4k-instruct",
       "--port", "1370",
-      "--tensor-parallel-size", "1",
+      "--tensor-parallel-size", "2",
       "--gpu_memory_utilization", "0.95",
       "--max-model-len", "4096",
     ]
