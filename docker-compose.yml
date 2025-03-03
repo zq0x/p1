@@ -74,11 +74,11 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /models:/models
-    shm_size: 8gb
+    shm_size: 4gb
     environment:
       - NCCL_DEBUG=INFO
     command: [
-      "--model", "microsoft/Phi-3-mini-4k-instruct",
+      "--model", "Qwen/Qwen2.5-1.5B-Instruct",
       "--port", "1370",
       "--tensor-parallel-size", "2",
       "--gpu_memory_utilization", "0.95",

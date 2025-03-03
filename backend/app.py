@@ -306,16 +306,46 @@ async def docker_rest(request: Request):
             
         if req_data["req_type"] == "generate":
             try:
-                if req_data["req_model"] not in llm_instances:
-                    print(f'MODEL NOT IN STANCES EGAAAAAAAL')
-                llm_instances[req_data["req_model"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
                 
-                print("llm_instances")
-                print(llm_instances)
-                sampling_params = SamplingParams(int(temperature=req_data["req_temperature"]), top_p=0.9, max_tokens=100)
                 
-                outputs = llm_instances[req_data["req_model"]].generate([req_data["req_prompt"]], sampling_params)
+
+                prompts = [
+                    "Hello, my name is",
+                    "The president of the United States is",
+                    "The capital of France is",
+                    "The future of AI is",
+                ]
+                sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
+
+                llm = LLM(model="facebook/opt-125m")
+
+                outputs = llm.generate(prompts, sampling_params)
+
+                for output in outputs:
+                    prompt = output.prompt
+                    generated_text = output.outputs[0].text
+                    print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+                                
                 return JSONResponse({"result_status": 200, "result_data": outputs[0].outputs[0].text})
+                                
+                                
+                                
+                
+                
+                
+                
+                
+                
+                # if req_data["req_model"] not in llm_instances:
+                #     print(f'MODEL NOT IN STANCES EGAAAAAAAL')
+                # llm_instances[req_data["req_model"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
+                
+                # print("llm_instances")
+                # print(llm_instances)
+                # sampling_params = SamplingParams(int(temperature=req_data["req_temperature"]), top_p=0.9, max_tokens=100)
+                
+                # outputs = llm_instances[req_data["req_model"]].generate([req_data["req_prompt"]], sampling_params)
+                # return JSONResponse({"result_status": 200, "result_data": outputs[0].outputs[0].text})
                 
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')                
