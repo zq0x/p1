@@ -200,8 +200,7 @@ async def docker_rest(request: Request):
         req_data = await request.json()
         
         print(f'req_data {req_data}')
-        if req_data["req_model_config"]:
-            print(f'req_data["req_model_config"] {req_data["req_model_config"]}')
+
         print(f'llm_instances {llm_instances}')
         
 
