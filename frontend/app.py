@@ -501,7 +501,7 @@ with gr.Blocks() as app:
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
     btn_dl = gr.Button("Download", visible=False)
     btn_update = gr.Button("Update", visible=True)
-    btn_service = gr.Button("Change", visible=True)
+    btn_service = gr.Button("Service", visible=True)
     prompt_in = gr.Textbox(placeholder="Write a prompt", show_label=False, visible=True)
     prompt_out = gr.Textbox(placeholder="Response", show_label=False, visible=True)
     prompt_btn = gr.Button("Prompt", visible=True)
@@ -530,15 +530,9 @@ with gr.Blocks() as app:
     container_state = gr.State([])  
     @gr.render(inputs=container_state)
     def render_container(render_container_list):
-        print(f'getting docker container list to load in gradio')
         docker_container_list = get_docker_container_list()
-        print(f'found countainer: {len(docker_container_list)} getting with "Id"')
-        docker_container_list_mit_ids = [c for c in docker_container_list if c["Id"]]
-        print(f'found countainer with "Id" : {len(docker_container_list_mit_ids)} getting Id array')
-        docker_container_list_mit_ids_arr = [c["Id"] for c in docker_container_list_mit_ids]
-        print(f'printing "Id"  array: {docker_container_list_mit_ids_arr} continuing with other code ..')
-        docker_container_list_running = [c for c in docker_container_list_mit_ids if c["State"]["Status"] == "running"]
-        docker_container_list_not_running = [c for c in docker_container_list_mit_ids if c["State"]["Status"] != "running"]
+        docker_container_list_running = [c for c in docker_container_list if c["State"]["Status"] == "running"]
+        docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
 
         def refresh_container():
             try:

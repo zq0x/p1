@@ -211,7 +211,7 @@ async def docker_rest(request: Request):
                 req_container.remove()
             except docker.errors.NotFound:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result_status": 500, "result_data": e})
+                return JSONResponse({"result_status": 500, "result_data": str(e)})
             try:
                 # Create the new service with updated configurations
                 res_container = client.containers.create(
@@ -244,8 +244,7 @@ async def docker_rest(request: Request):
                             device_ids=['0', '1'],
                             capabilities=[['gpu']]
                         )
-                    ],
-                    restart_policy=docker.types.RestartPolicy(condition='always')
+                    ]
                 )
 
                 print("Service created successfully.")
@@ -253,31 +252,10 @@ async def docker_rest(request: Request):
                 return JSONResponse({"result_status": 200, "result_data": str(res_container_id)})
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result_status": 500, "result_data": e})
+                return JSONResponse({"result_status": 500, "result_data": str(e)})
            
 
         if req_data["req_type"] == "update":
-            try:
-                req_container = client.containers.get('container_vllm')
-                res_container = req_container.update(
-                    environment={
-                        "NCCL_DEBUG": "INFO",
-                        "MODEL": req_data["req_model"],
-                        "PORT": "1370",
-                        "TENSOR_PARALLEL_SIZE": "1",
-                        "GPU_MEMORY_UTILIZATION": "0.95",
-                        "MAX_MODEL_LEN": "4096"
-                    }
-                )
-                container_id = res_container.id
-                return JSONResponse({"result_status": 200, "result_data": str(container_id)})
-            except Exception as e:
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-
-                return JSONResponse({"result_status": 200, "result_data": stats})
-            
-            
-        if req_data["req_type"] == "update2":
             try:
 
                 print(f'trying to update {req_data["req_model"]}...')
@@ -342,7 +320,7 @@ async def docker_rest(request: Request):
                 
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')                
-                return JSONResponse({"result_status": 500, "result_data": e})
+                return JSONResponse({"result_status": 500, "result_data": str(e)})
 
         if req_data["req_type"] == "load":
             try:
