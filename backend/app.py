@@ -204,7 +204,7 @@ async def docker_rest(request: Request):
         
 
 
-        if req_data["req_method"] == "service":
+        if req_data["req_type"] == "service":
             try:
                 service = client.services.get('vllm-service')
                 service.remove()
@@ -256,7 +256,7 @@ async def docker_rest(request: Request):
                 return JSONResponse({"result_status": 500, "result_data": e})
            
 
-        if req_data["req_method"] == "update":
+        if req_data["req_type"] == "update":
             try:
                 req_container = client.containers.get('container_vllm')
                 res_container = req_container.update(
@@ -278,7 +278,7 @@ async def docker_rest(request: Request):
                 return JSONResponse({"result_status": 200, "result_data": stats})
             
             
-        if req_data["req_method"] == "update2":
+        if req_data["req_type"] == "update2":
             try:
 
                 print(f'trying to update {req_data["req_model"]}...')
@@ -328,7 +328,7 @@ async def docker_rest(request: Request):
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 return JSONResponse({"result_status": 404, "result_data": str(e)})
             
-        if req_data["req_method"] == "generate":
+        if req_data["req_type"] == "generate":
             try:
                 if req_data["req_model"] not in llm_instances:
                     print(f'MODEL NOT IN STANCES EGAAAAAAAL')
@@ -345,7 +345,7 @@ async def docker_rest(request: Request):
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')                
                 return JSONResponse({"result_status": 500, "result_data": e})
 
-        if req_data["req_method"] == "load":
+        if req_data["req_type"] == "load":
             try:
                 llm_instances[req_data["req_model"]] = LLM(model=req_data["req_model"], task=req_data["req_task"])
                 
@@ -359,38 +359,38 @@ async def docker_rest(request: Request):
 
         
                 
-        if req_data["req_method"] == "logs":
+        if req_data["req_type"] == "logs":
             req_container = client.containers.get(req_data["req_model"])
             res_logs = req_container.logs()
             res_logs_str = res_logs.decode('utf-8')
             return JSONResponse({"result_status": 200, "result_data": res_logs_str})
 
-        if req_data["req_method"] == "network":
+        if req_data["req_type"] == "network":
             req_container = client.containers.get(req_data["req_container_name"])
             stats = req_container.stats(stream=False)
             return JSONResponse({"result_status": 200, "result_data": stats})
 
-        if req_data["req_method"] == "list":
+        if req_data["req_type"] == "list":
             res_container_list = client.containers.list(all=True)
             return JSONResponse([container.attrs for container in res_container_list])
 
-        if req_data["req_method"] == "delete":
+        if req_data["req_type"] == "delete":
             req_container = client.containers.get(req_data["req_model"])
             req_container.stop()
             req_container.remove(force=True)
             return JSONResponse({"result_status": 200})
 
-        if req_data["req_method"] == "stop":
+        if req_data["req_type"] == "stop":
             req_container = client.containers.get(req_data["req_model"])
             req_container.stop()
             return JSONResponse({"result_status": 200})
 
-        if req_data["req_method"] == "start":
+        if req_data["req_type"] == "start":
             req_container = client.containers.get(req_data["req_model"])
             req_container.start()
             return JSONResponse({"result_status": 200})
 
-        if req_data["req_method"] == "create":
+        if req_data["req_type"] == "create":
             try:
                 container_name = str(req_data["req_model"]).replace('/', '_')
                 res_db_gpu = await r.get('db_gpu')
@@ -484,7 +484,7 @@ async def docker_rest(request: Request):
 
 
 
-        if req_data["req_method"] == "change":
+        if req_data["req_type"] == "change":
             try:
                 print("change stopping .-..")
                 req_container = client.containers.get("container_vllm")

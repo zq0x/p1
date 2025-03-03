@@ -341,7 +341,7 @@ def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_tempera
 
 def docker_api_logs(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"logs","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"logs","req_model":req_model})
         res_json = response.json()
         return f'{res_json["result_data"]}'
     except Exception as e:
@@ -350,7 +350,7 @@ def docker_api_logs(req_model):
 
 def docker_api_network(req_container_name):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"network","req_container_name":req_container_name})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"network","req_container_name":req_container_name})
         res_json = response.json()
         if res_json["result"] == 200:
             return f'{res_json["result_data"]["networks"]["eth0"]["rx_bytes"]}'
@@ -362,7 +362,7 @@ def docker_api_network(req_container_name):
     
 def docker_api_start(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"start","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"start","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
@@ -371,7 +371,7 @@ def docker_api_start(req_model):
 
 def docker_api_stop(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"stop","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"stop","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
@@ -380,7 +380,7 @@ def docker_api_stop(req_model):
 
 def docker_api_delete(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"delete","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"delete","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
@@ -389,7 +389,7 @@ def docker_api_delete(req_model):
 
 def docker_api_change(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"change","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
@@ -398,7 +398,7 @@ def docker_api_change(req_model):
 
 def docker_api_update(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"update","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"update","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
@@ -408,7 +408,7 @@ def docker_api_update(req_model):
 def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
     try:
         req_container_name = str(req_model).replace('/', '_')
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"create","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"create","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
         response_json = response.json()
         
         new_entry = [{
@@ -436,7 +436,7 @@ def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm
 
     
 def get_docker_container_list():
-    response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"list"})
+    response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type":"list"})
     res_json = response.json()
 
     if response.status_code == 200:
@@ -543,7 +543,7 @@ with gr.Blocks() as app:
         def refresh_container():
             try:
                 global docker_container_list
-                response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method": "list"})
+                response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type": "list"})
                 docker_container_list = response.json()
                 return docker_container_list
             
@@ -673,7 +673,7 @@ with gr.Blocks() as app:
     def refresh_container_list():
         try:
             global docker_container_list
-            response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method": "list"})
+            response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_type": "list"})
             docker_container_list = response.json()
             return docker_container_list
         except Exception as e:
