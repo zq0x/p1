@@ -231,6 +231,7 @@ async def docker_rest(request: Request):
                 print(f'all vLLM containers stopped successfully')                
                 
                 print(f'loading new model ..')
+                container_name = str(req_data["req_model"]).replace('/', '_')
                 res_container = client.containers.run(
                     "vllm/vllm-openai:latest",
                     command=f'--model {req_data["req_model"]}',
