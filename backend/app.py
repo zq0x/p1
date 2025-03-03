@@ -217,8 +217,8 @@ async def docker_rest(request: Request):
                 res_container = client.containers.create(
                     image='vllm/vllm-openai:latest',
                     name='vllm-service',
-                    env=['NCCL_DEBUG=INFO'],
-                    ports=[('1370', '1370')],
+                    environment=['NCCL_DEBUG=INFO'],
+                    ports={'1370/tcp': 1370},
                     mounts=[
                         docker.types.Mount(target='/models', source='/models', type='bind')
                     ],
@@ -237,15 +237,14 @@ async def docker_rest(request: Request):
                         '--enable-chunked-prefill',
                         '--trust-remote-code'
                     ],
-                    resources=docker.types.Resources(
-                        reservations=docker.types.Resources(
-                            devices=[{
-                                'Driver': 'nvidia',
-                                'DeviceIDs': ['0', '1'],
-                                'Capabilities': ['gpu']
-                            }]
+                    device_requests=[
+                        docker.types.DeviceRequest(
+                            driver='nvidia',
+                            count=-1,
+                            device_ids=['0', '1'],
+                            capabilities=[['gpu']]
                         )
-                    ),
+                    ],
                     restart_policy=docker.types.RestartPolicy(condition='always')
                 )
 
