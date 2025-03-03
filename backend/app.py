@@ -227,7 +227,7 @@ async def docker_rest(request: Request):
                         vllm_container.wait()
                     print(f'waiting for containers to stop...')
                     time.sleep(2)
-                    vllm_containers_running = [container for container in container_list if container["name"].startswith("vllm") and container["State"]["Status"] == "running"]
+                    vllm_containers_running = [c for c in container_list if c.name.startswith("vllm") and c.status == "running"]
                 print(f'all vLLM containers stopped successfully')                
                 
                 print(f'loading new model ..')
@@ -293,7 +293,7 @@ async def docker_rest(request: Request):
                 print(f'Loading the new model: {req_data["req_model"]}...')
                 llm = LLM(
                     model=req_data["req_model"],
-                    tensor_parallel_size=1,  # Match the tensor-parallel-size in your Docker config
+                    tensor_parallel_size=2,  # Match the tensor-parallel-size in your Docker config
                     gpu_memory_utilization=0.92  # Match the gpu_memory_utilization in your Docker config
                 )
 
@@ -308,19 +308,20 @@ async def docker_rest(request: Request):
             try:
                 
                 
-
+                print(f'trying to generate ..')
                 prompts = [
                     "Hello, my name is",
                     "The president of the United States is",
                     "The capital of France is",
                     "The future of AI is",
                 ]
+                print(f'trying to generate .. prompts: {prompts}')
                 sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
-
+                print(f'trying to generate .. prompts: {sampling_params}')
                 llm = LLM(model="facebook/opt-125m")
-
+                print(f'trying to generate .. llm: {llm}')
                 outputs = llm.generate(prompts, sampling_params)
-
+                print(f'trying to generate .. outputs: {outputs}')
                 for output in outputs:
                     prompt = output.prompt
                     generated_text = output.outputs[0].text
