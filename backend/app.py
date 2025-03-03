@@ -206,14 +206,15 @@ async def docker_rest(request: Request):
 
         if req_data["req_type"] == "service":
             try:
-                service = client.services.get('vllm-service')
-                service.remove()
+                req_container = client.containers.get('container_vllm')
+                req_container.stop()
+                req_container.remove()
             except docker.errors.NotFound:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 return JSONResponse({"result_status": 500, "result_data": e})
             try:
                 # Create the new service with updated configurations
-                res_service = client.services.create(
+                res_container = client.containers.create(
                     image='vllm/vllm-openai:latest',
                     name='vllm-service',
                     env=['NCCL_DEBUG=INFO'],
@@ -222,7 +223,7 @@ async def docker_rest(request: Request):
                         docker.types.Mount(target='/models', source='/models', type='bind')
                     ],
                     command=[
-                        '--model', 'models/facebook/opt-125m',
+                        '--model', '/models/facebook/opt-125m',
                         '--max-model-len', '4096',
                         '--cpu-offload-gb', '0',
                         '--enforce-eager',
@@ -249,8 +250,8 @@ async def docker_rest(request: Request):
                 )
 
                 print("Service created successfully.")
-                res_service_id = res_service.id
-                return JSONResponse({"result_status": 200, "result_data": str(res_service_id)})
+                res_container_id = res_container.id
+                return JSONResponse({"result_status": 200, "result_data": str(res_container_id)})
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 return JSONResponse({"result_status": 500, "result_data": e})
@@ -260,7 +261,6 @@ async def docker_rest(request: Request):
             try:
                 req_container = client.containers.get('container_vllm')
                 res_container = req_container.update(
-                    shm_size=req_data.get("shm_size", "8gb"),
                     environment={
                         "NCCL_DEBUG": "INFO",
                         "MODEL": req_data["req_model"],
