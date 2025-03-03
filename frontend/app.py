@@ -316,7 +316,7 @@ def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_tempera
     
     try:
         print(f'trying to get config ... ')
-        model_config = selected_model_config_data
+        model_config = selected_model_config_data.value
         print(f'got model_config: {model_config} ')
         response = requests.post(BACKEND_URL, json={
             "req_type":req_type,
@@ -488,7 +488,7 @@ with gr.Blocks() as app:
     
     selected_model_search_data = gr.Textbox(label="search_data", visible=True)
     selected_model_hf_data = gr.Textbox(label="hf_data", visible=True)
-    selected_model_config_data = gr.Textbox(label="config_data", visible=True)
+    selected_model_config_data = gr.Textbox(label="config_data", value="bla", visible=True)
     gr.Markdown(
         """
         <hr>

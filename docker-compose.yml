@@ -70,7 +70,7 @@ services:
               capabilities: [gpu]
     ports:
       - "1370:1370"
-    container_name: vllm_models--facebook--opt-125m
+    container_name: vllm_bla
     volumes:
       - ./vllm/logs:/var/log
       - /models:/models
