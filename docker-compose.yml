@@ -70,7 +70,7 @@ services:
               capabilities: [gpu]
     ports:
       - "1370:1370"
-    container_name: container_vllm
+    container_name: vllm_models--facebook--opt-125m
     volumes:
       - ./vllm/logs:/var/log
       - /models:/models
@@ -78,7 +78,7 @@ services:
     environment:
       - NCCL_DEBUG=INFO
     command: [
-      "--model", "Qwen/Qwen2.5-1.5B-Instruct",
+      "--model", "facebook/opt-125m",
       "--port", "1370",
       "--tensor-parallel-size", "1",
       "--gpu_memory_utilization", "0.95",

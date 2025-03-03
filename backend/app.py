@@ -200,60 +200,51 @@ async def docker_rest(request: Request):
         req_data = await request.json()
         
         print(f'req_data {req_data}')
+        print(f'req_data["req_model_config"] {req_data["req_model_config"]}')
         print(f'llm_instances {llm_instances}')
         
 
 
         if req_data["req_type"] == "service":
             try:
-                req_container = client.containers.get('container_vllm')
-                req_container.stop()
-                req_container.remove()
-            except docker.errors.NotFound:
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return JSONResponse({"result_status": 500, "result_data": str(e)})
-            try:
-                # Create the new service with updated configurations
-                res_container = client.containers.create(
-                    image='vllm/vllm-openai:latest',
-                    name='vllm-service',
-                    environment=['NCCL_DEBUG=INFO'],
-                    ports={'1370/tcp': 1370},
-                    mounts=[
-                        docker.types.Mount(target='/models', source='/models', type='bind')
-                    ],
-                    command=[
-                        '--model', '/models/facebook/opt-125m',
-                        '--max-model-len', '4096',
-                        '--cpu-offload-gb', '0',
-                        '--enforce-eager',
-                        '--enable-prefix-caching',
-                        '--tensor-parallel-size', '2',
-                        '--kv-cache-dtype', 'fp8',
-                        '--port', '1370',
-                        '--swap-space', '2',
-                        '--gpu-memory-utilization', '0.95',
-                        '--served-model-name', 'opt-125m',
-                        '--enable-chunked-prefill',
-                        '--trust-remote-code'
-                    ],
-                    device_requests=[
-                        docker.types.DeviceRequest(
-                            driver='nvidia',
-                            count=-1,
-                            device_ids=['0', '1'],
-                            capabilities=[['gpu']]
-                        )
-                    ]
+                print(f'finding vLLM containers to stop to free GPU memory...')
+                container_list = client.containers.list(all=True)
+                print(f'found total containers: {len(res_container_list)}')
+                vllm_containers_running = [container for container in container_list if container.name.startswith("vllm") and container["State"]["Status"] == "running"]
+                print(f'found total vLLM running containers: {len(vllm_containers_running)}')
+                while len(vllm_containers_running) > 0:
+                    print(f'stopping all vLLM containers...')
+                    for vllm_container in vllm_containers_running:
+                        print(f'stopping container {vllm_container.name}...')
+                        vllm_container.stop()
+                        vllm_container.wait()
+                    print(f'waiting for containers to stop...')
+                    time.sleep(2)
+                    vllm_containers_running = [container for container in container_list if container.name.startswith("vllm") and container["State"]["Status"] == "running"]
+                print(f'all vLLM containers stopped successfully')                
+                
+                print(f'loading new model ..')
+                res_container = client.containers.run(
+                    "vllm/vllm-openai:latest",
+                    command=f'--model {req_data["req_model"]}',
+                    name=container_name,
+                    runtime=req_data["req_runtime"],
+                    volumes={"/models": {"bind": "/models", "mode": "rw"}},
+                    ports={
+                        f'{req_data["req_port_vllm"]}/tcp': ("0.0.0.0", req_data["req_port_model"])
+                    },
+                    ipc_mode="host",
+                    device_requests=[device_request],
+                    detach=True
                 )
+                container_id = res_container.id
+                return JSONResponse({"result_status": 200, "result_data": str(container_id)})
+                
 
-                print("Service created successfully.")
-                res_container_id = res_container.id
-                return JSONResponse({"result_status": 200, "result_data": str(res_container_id)})
             except Exception as e:
                 print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 return JSONResponse({"result_status": 500, "result_data": str(e)})
-           
+
 
         if req_data["req_type"] == "update":
             try:

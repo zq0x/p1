@@ -315,13 +315,17 @@ def update_visibility_model_info():
 def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_temperature=None):
     
     try:
+        print(f'trying to get config ... ')
+        model_config = selected_model_config_data
+        print(f'got model_config: {model_config} ')
         response = requests.post(BACKEND_URL, json={
             "req_type":req_type,
             "req_model":req_model,
             "req_task":req_task,
             "req_prompt":req_prompt,
             "req_type":req_type,
-            "req_temperature":req_temperature
+            "req_temperature":req_temperature,
+            "req_model_config":model_config
         })
         
         if response.status_code == 200:
