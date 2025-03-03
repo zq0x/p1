@@ -312,12 +312,10 @@ def update_visibility_model_info():
 
 
 
-def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_temperature=None):
+def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_temperature=None, req_config=None):
     
     try:
-        print(f'trying to get config ... ')
-        model_config = selected_model_config_data.value
-        print(f'got model_config: {model_config} ')
+        print(f'got model_config: {req_config} ')
         response = requests.post(BACKEND_URL, json={
             "req_type":req_type,
             "req_model":req_model,
@@ -325,7 +323,7 @@ def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_tempera
             "req_prompt":req_prompt,
             "req_type":req_type,
             "req_temperature":req_temperature,
-            "req_model_config":model_config
+            "req_model_config":req_config
         })
         
         if response.status_code == 200:
@@ -686,7 +684,7 @@ with gr.Blocks() as app:
 
     btn_update.click(lambda selected_model: docker_api("update", selected_model), inputs=[model_dropdown], outputs=create_response)
     btn_service.click(lambda selected_model: docker_api("service", selected_model), inputs=[model_dropdown], outputs=create_response)
-    prompt_btn.click(lambda selected_model: docker_api("generate", selected_model, "auto", 0.8), inputs=[model_dropdown], outputs=create_response)
+    prompt_btn.click(lambda selected_model: docker_api("generate", selected_model, "auto", 0.8, selected_model_config_data), inputs=[model_dropdown], outputs=create_response)
     # btn_service.click(docker_api, inputs=["service",model_dropdown], outputs=create_response)
     # prompt_btn.click(docker_api, inputs=["generate",model_dropdown,"auto",prompt_in,0.8], outputs=prompt_out)
 
