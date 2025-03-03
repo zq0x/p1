@@ -210,8 +210,14 @@ async def docker_rest(request: Request):
                 print(f'finding vLLM containers to stop to free GPU memory...')
                 container_list = client.containers.list(all=True)
                 print(f'found total containers: {len(container_list)}')
+                # docker_container_list = get_docker_container_list()
+                # docker_container_list_running = [c for c in docker_container_list if c["State"]["Status"] == "running"]
                 
-                vllm_containers_running = [container for container in container_list if container.name.startswith("vllm") and container.status == "running"]
+                # res_container_list = client.containers.list(all=True)
+                # return JSONResponse([container.attrs for container in res_container_list])
+                
+                print(f'mhmmhmhmh')
+                vllm_containers_running = [c for c in container_list if c.name.startswith("vllm") and c.status == "running"]
                 print(f'found total vLLM running containers: {len(vllm_containers_running)}')
                 while len(vllm_containers_running) > 0:
                     print(f'stopping all vLLM containers...')
