@@ -685,8 +685,9 @@ with gr.Blocks() as app:
 
     btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
     
-    action_textbox = gr.Textbox(value="update", visible=True)
-    btn_update.click(docker_api, inputs=[action_textbox,model_dropdown], outputs=create_response)
+
+    # btn_update.click(docker_api, inputs=[action_textbox,model_dropdown], outputs=create_response)
+    btn_update.click(lambda selected_model: docker_api("update", selected_model), inputs=[model_dropdown], outputs=create_response)
     # btn_service.click(docker_api, inputs=["service",model_dropdown], outputs=create_response)
     # prompt_btn.click(docker_api, inputs=["generate",model_dropdown,"auto",prompt_in,0.8], outputs=prompt_out)
 
