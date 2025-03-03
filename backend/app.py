@@ -219,8 +219,6 @@ async def docker_rest(request: Request):
                     env=['NCCL_DEBUG=INFO'],
                     ports=[('1370', '1370')],
                     mounts=[
-                        docker.types.Mount(target='/data', source='/volume_hf', type='bind'),
-                        docker.types.Mount(target='/mnt/primeline-ai', source='/mnt/primeline-ai', type='bind'),
                         docker.types.Mount(target='/models', source='/models', type='bind')
                     ],
                     command=[
